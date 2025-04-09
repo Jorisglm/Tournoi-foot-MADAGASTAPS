@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tournoi de Foot - 13 équipes</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f2f2f2; }
+    h1, h2 { text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+    th { background-color: #4CAF50; color: white; }
+    .match, .finale { margin-bottom: 10px; background: #fff; padding: 10px; border-radius: 5px; max-width: 500px; margin-left: auto; margin-right: auto; }
+    .match input[type="number"], .finale input[type="number"] { width: 50px; }
+    button { padding: 8px 12px; cursor: pointer; margin-top: 5px; }
+    #finaleSection { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Tournoi de Foot - 13 équipes</h1>
+
+  <h2>Classement</h2>
+  <table id="classement">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Équipe</th>
+        <th>MJ</th>
+        <th>G</th>
+        <th>N</th>
+        <th>P</th>
+        <th>BP</th>
+        <th>BC</th>
+        <th>Diff</th>
+        <th>Pts</th>
+      </tr>
+    </thead>
+    <tbody id="classementBody"></tbody>
+  </table>
+
+  <h2>Matchs de Championnat</h2>
+  <div id="matchs"></div>
+
+  <div id="finaleSection">
+    <h2>Finale</h2>
+    <div class="finale" id="finaleMatch"></div>
+  </div>
+
+  <script>
+    const equipes = [
+      "Équipe 1", "Équipe 2", "Équipe 3", "Équipe 4", "Équipe 5", "Équipe 6", "Équipe 7",
+      "Équipe 8", "Équipe 9", "Équipe 10", "Équipe 11", "Équipe 12", "Équipe 13"
+    ];
+
+    let classement = equipes.map(nom => ({
+      nom, MJ: 0, G: 0, N: 0, P: 0, BP: 0, BC: 0, Diff: 0, Pts: 0
+    }));
+
+    let totalMatchs = (equipes.length * (equipes.length - 1)) / 2;
+    let matchsValides = 0;
+
+    function genererMatchs() {
+      const matchsDiv = document.getElementById('matchs');
+      for (let i = 0; i < equipes.length; i++) {
+        for (let j = i + 1; j < equipes.length; j++) {
+          const match = document.createElement('div');
+          match.className = 'match';
+          match.innerHTML = `
+            <span>${equipes[i]} vs ${equipes[j]}</span><br>
+            <input type="number" placeholder="${equipes[i]}" id="score_${i}_${j}_a"> -
+            <input type="number" placeholder="${equipes[j]}" id="score_${i}_${j}_b">
+            <button onclick="validerScore(${i}, ${j}, this)" >Valider</button>
+          `;
+          matchsDiv.appendChild(match);
+        }
+      }
+    }
+
+    function mettreAJourClassement() {
+      classement.forEach(equipe => {
+        equipe.Diff = equipe.BP - equipe.BC;
+      });
+      classement.sort((a, b) => b.Pts - a.Pts || b.Diff - a.Diff || b.BP - a.BP);
+
+      const classementBody = document.getElementById('classementBody');
+      classementBody.innerHTML = '';
+      classement.forEach((equipe, index) => {
+        classementBody.innerHTML += `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${equipe.nom}</td>
+            <td>${equipe.MJ}</td>
+            <td>${equipe.G}</td>
+            <td>${equipe.N}</td>
+            <td>${equipe.P}</td>
+            <td>${equipe.BP}</td>
+            <td>${equipe.BC}</td>
+            <td>${equipe.Diff}</td>
+            <td>${equipe.Pts}</td>
+          </tr>`;
+      });
+    }
+
+    function validerScore(i, j, bouton) {
+      const scoreA = parseInt(document.getElementById(`score_${i}_${j}_a`).value);
+      const scoreB = parseInt(document.getElementById(`score_${i}_${j}_b`).value);
+      if (isNaN(scoreA) || isNaN(scoreB)) return;
+
+      let equipeA = classement[i];
+      let equipeB = classement[j];
+
+      equipeA.MJ++; equipeB.MJ++;
+      equipeA.BP += scoreA; equipeB.BP += scoreB;
+      equipeA.BC += scoreB; equipeB.BC += scoreA;
+
+      if (scoreA > scoreB) {
+        equipeA.G++; equipeA.Pts += 3;
+        equipeB.P++;
+      } else if (scoreA < scoreB) {
+        equipeB.G++; equipeB.Pts += 3;
+        equipeA.P++;
+      } else {
+        equipeA.N++; equipeB.N++;
+        equipeA.Pts++; equipeB.Pts++;
+      }
+
+      matchsValides++;
+      bouton.disabled = true;
+
+      mettreAJourClassement();
+
+      if (matchsValides === totalMatchs) {
+        lancerFinale();
+      }
+    }
+
+    function lancerFinale() {
+      document.getElementById('finaleSection').style.display = 'block';
+      const [finaliste1, finaliste2] = [classement[0], classement[1]];
+      const finaleMatch = document.getElementById('finaleMatch');
+
+      finaleMatch.innerHTML = `
+        <span><strong>${finaliste1.nom}</strong> vs <strong>${finaliste2.nom}</strong></span><br>
+        <input type="number" id="finale_a"> - <input type="number" id="finale_b">
+        <button onclick="validerFinale('${finaliste1.nom}', '${finaliste2.nom}')">Valider le score</button>
+        <div id="resultatFinale"></div>
+      `;
+    }
+
+    function validerFinale(nomA, nomB) {
+      const scoreA = parseInt(document.getElementById('finale_a').value);
+      const scoreB = parseInt(document.getElementById('finale_b').value);
+      const res = document.getElementById('resultatFinale');
+
+      if (isNaN(scoreA) || isNaN(scoreB)) return;
+
+      if (scoreA > scoreB) {
+        res.innerHTML = `<p><strong>🏆 ${nomA} remporte la finale !</strong></p>`;
+      } else if (scoreB > scoreA) {
+        res.innerHTML = `<p><strong>🏆 ${nomB} remporte la finale !</strong></p>`;
+      } else {
+        res.innerHTML = `<p>Match nul ! Merci de départager les équipes (prolongations/tirs au but)</p>`;
+      }
+    }
+
+    genererMatchs();
+    mettreAJourClassement();
+  </script>
+</body>
+</html>
